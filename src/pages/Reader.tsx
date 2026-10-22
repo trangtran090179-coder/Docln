@@ -32,13 +32,16 @@ const Reader: React.FC = () => {
         const pdfUrl = book.documentUrl.startsWith('http')
           ? book.documentUrl
           : `${baseUrl}${book.documentUrl}`;
+
+        console.log('DEBUG: Attempting to load PDF from URL:', pdfUrl);
+
         const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
         const pdf = await loadingTask.promise;
         setNumPages(pdf.numPages);
         setLoading(false);
-      } catch (err) {
-        console.error('Error loading PDF:', err);
-        setError('Không thể tải file PDF. Vui lòng thử lại sau.');
+      } catch (err: any) {
+        console.error('DEBUG: PDF Loading Error:', err);
+        setError(`Lỗi: ${err.message || 'Không thể tải file PDF'}`);
         setLoading(false);
       }
     };
@@ -104,7 +107,9 @@ const Reader: React.FC = () => {
                 {Array.from({ length: numPages }, (_, i) => (
                   <PdfPage key={i} pageNumber={i + 1} pdfUrl={book.documentUrl.startsWith('http')
                   ? book.documentUrl
-                  : `${window.location.origin}${book.documentUrl}`} />
+                  : (window.location.pathname.startsWith('/Docln')
+                    ? `${window.location.origin}/Docln${book.documentUrl}`
+                    : `${window.location.origin}${book.documentUrl}`)} />
                 ))}
               </div>
             )}
