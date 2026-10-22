@@ -5,8 +5,8 @@ import * as pdfjsLib from 'pdfjs-dist';
 import { MOCK_BOOKS } from '../constants/books';
 import { useAppStore } from '../contexts/appStore';
 
-// Cấu hình worker cho PDF.js (Sử dụng CDN để đảm bảo hoạt động trên GitHub Pages)
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// Cấu hình worker cho PDF.js (Sử dụng file local trong thư mục public để tránh lỗi CDN)
+pdfjsLib.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js';
 
 const Reader: React.FC = () => {
   const { bookId } = useParams<{ bookId: string }>();
