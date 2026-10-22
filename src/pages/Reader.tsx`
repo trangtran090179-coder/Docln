@@ -1,0 +1,324 @@
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate, Link } from 'react-router-dom';
+import {
+  ChevronLeft,
+  ChevronRight,
+  Type,
+  AlignCenter,
+  Maximize2,
+  Minimize2,
+  Settings,
+  X,
+  Moon,
+  Sun,
+  Coffee,
+  Bookmark
+} from 'lucide-react';
+import { MOCK_BOOKS } from '../constants/books';
+import { useAppStore } from '../contexts/appStore';
+import { UserProgress, UserSettings } from '../types';
+
+const Reader: React.FC = () => {
+  const { bookId, chapterId } = useParams<{ bookId: string; chapterId?: string }>();
+  const navigate = useNavigate();
+  const { settings, updateSettings, updateProgress } = useAppStore();
+
+  const book = MOCK_BOOKS.find(b => b.id === bookId);
+  const [currentChapterId, setCurrentChapterId] = useState(chapterId || '');
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [showControls, setShowControls] = useState(true);
+  const contentRef = useRef<HTMLDivElement>(null);
+
+  // Tự động xác định chương nếu là truyện
+  useEffect(() => {
+    if (!book) return;
+    if (book.type === 'story') {
+      if (!currentChapterId) {
+        setCurrentChapterId(book.chapters?.[0]?.id || '');
+      }
+    }
+  }, [book, currentChapterId]);
+
+  // Xử lý cuộn và lưu tiến độ
+  useEffect(() => {
+    const handleScroll = () => {
+      if (!contentRef.current) return;
+      const { scrollTop, scrollHeight, clientHeight } = contentRef.current;
+      const progressPercent = (scrollTop / (scrollHeight - clientHeight)) * 100;
+
+      // Lưu vị trí đọc mỗi khi cuộn
+      updateProgress({
+        bookId: bookId!,
+        chapterId: currentChapterId,
+        lastPosition: scrollTop,
+        lastReadAt: new Date().toISOString(),
+      });
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [bookId, currentChapterId, updateProgress]);
+
+  // Điều hướng bàn phím
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') handlePrev();
+      if (e.key === 'ArrowRight') handleNext();
+      if (e.key === 'Escape') setShowControls(prev => !prev);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [currentChapterId]);
+
+  if (!book) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen space-y-4">
+        <h2 className="text-2xl font-bold">Không tìm thấy tài liệu</h2>
+        <Link to="/" className="btn-primary">Quay lại trang chủ</Link>
+      </div>
+    );
+  }
+
+  const currentChapter = book.chapters?.find(c => c.id === currentChapterId);
+
+  const handlePrev = () => {
+    if (book.type !== 'story' || !book.chapters) return;
+    const currentIndex = book.chapters.findIndex(c => c.id === currentChapterId);
+    if (currentIndex > 0) {
+      const prevId = book.chapters[currentIndex - 1].id;
+      setCurrentChapterId(prevId);
+      navigate(`/read/${bookId}/${prevId}`);
+    }
+  };
+
+  const handleNext = () => {
+    if (book.type !== 'story' || !book.chapters) return;
+    const currentIndex = book.chapters.findIndex(c => c.id === currentChapterId);
+    if (currentIndex < book.chapters.length - 1) {
+      const nextId = book.chapters[currentIndex + 1].id;
+      setCurrentChapterId(nextId);
+      navigate(`/read/${bookId}/${nextId}`);
+    }
+  };
+
+  const readingTheme = settings.theme; // light | dark | system
+
+  return (
+    <div className={`min-h-screen transition-colors duration-300 ${
+      readingTheme === 'dark' ? 'bg-slate-900 text-slate-100' :
+      readingTheme === 'sepia' ? 'bg-orange-50 text-orange-900' : 'bg-white text-slate-900'
+    }`}>
+      {/* Top Control Bar */}
+      <div className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 border-b ${
+        showControls
+          ? 'translate-y-0 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md'
+          : '-translate-y-full bg-transparent border-transparent'
+      } border-slate-200 dark:border-slate-700`}>
+        <div className="max-w-screen-xl mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={() => navigate(`/book/${bookId}`)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <h2 className="text-sm font-bold truncate max-w-[150px] sm:max-w-md">
+              {book.title} {currentChapter ? ` - ${currentChapter.title}` : ''}
+            </h2>
+          </div >
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsSettingsOpen(true)}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors"
+            >
+              <Settings className="w-5 h-5" />
+            </button>
+          </div >
+        </div >
+      </div >
+
+      {/* Reading Progress Bar */}
+      <div className="fixed top-0 left-0 h-1 bg-blue-500 z-[60] transition-all duration-150"
+           style={{ width: '0%' }} // This would be calculated based on scroll
+      />
+
+      {/* Reader Content */}
+      <div
+        ref={contentRef}
+        className={`relative mx-auto px-6 py-12 transition-all duration-300 ${
+          settings.contentWidth === 'narrow' ? 'max-w-2xl' :
+          settings.contentWidth === 'wide' ? 'max-w-5xl' : 'max-w-3xl'
+        }`}
+        onMouseMove={() => setShowControls(true)}
+        onMouseLeave={() => setTimeout(() => setShowControls(false), 3000)}
+      >
+        {book.type === 'story' && currentChapter ? (
+          <article className="space-y-6">
+            <h1 className="text-3xl md:text-4xl font-extrabold text-center mb-12">
+              {currentChapter.title}
+            </h1>
+            <div
+              className="leading-relaxed"
+              style={{
+                fontSize: `${settings.fontSize}px`,
+                lineHeight: settings.lineHeight
+              }}
+            >
+              {currentChapter.content.split('\n').map((para, i) => (
+                <p key={i} className="mb-4">{para}</p>
+              ))}
+            </div >
+          </article>
+        ) : (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-6">
+            <div className="p-6 bg-slate-100 dark:bg-slate-800 rounded-full">
+              <FileText className="w-12 h-12 text-slate-400" />
+            </div >
+            <div className="space-y-2">
+              <h3 className="text-xl font-bold">Tài liệu PDF/EPUB</h3>
+              <p className="text-slate-500">
+                Tính năng đọc file PDF/EPUB đang được tích hợp.
+                Hiện tại bạn có thể xem nội dung văn bản cho các truyện.
+              </p>
+              <a href={book.documentUrl} target="_blank" rel="noreferrer" className="btn-primary inline-block mt-4">
+                Mở tài liệu gốc
+              </a>
+            </div >
+          </div >
+        )}
+
+        {/* Pagination */}
+        {book.type === 'story' && (
+          <div className="flex justify-between items-center mt-16 pt-8 border-t border-slate-200 dark:border-slate-700">
+            <button
+              onClick={handlePrev}
+              disabled={!currentChapter || book.chapters?.findIndex(c => c.id === currentChapterId) === 0}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-all"
+            >
+              <ChevronLeft className="w-5 h-5" />
+              <span>Chương trước</span>
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={!currentChapter || book.chapters?.findIndex(c => c.id === currentChapterId) === book.chapters.length - 1}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-30 transition-all"
+            >
+              <span>Chương tiếp</span>
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          </div >
+        )}
+      </div >
+
+      {/* Settings Modal */}
+      {isSettingsOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl w-full max-w-md p-6 shadow-2xl space-y-6">
+            <div className="flex justify-between items-center">
+              <h3 className="text-xl font-bold flex items-center gap-2">
+                <Settings className="w-5 h-5" />
+                Tùy chỉnh đọc
+              </h3>
+              <button onClick={() => setIsSettingsOpen(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-full">
+                <X className="w-6 h-6" />
+              </button>
+            </div >
+
+            <div className="space-y-6">
+              {/* Theme Selection */}
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-500 uppercase">Chế độ hiển thị</label>
+                <div className="grid grid-cols-3 gap-3">
+                  <button
+                    onClick={() => updateSettings({ theme: 'light' })}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                      settings.theme === 'light' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <Sun className="w-5 h-5" />
+                    <span className="text-xs font-medium">Sáng</span>
+                  </button>
+                  <button
+                    onClick={() => updateSettings({ theme: 'dark' })}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                      settings.theme === 'dark' ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <Moon className="w-5 h-5" />
+                    <span className="text-xs font-medium">Tối</span>
+                  </button>
+                  <button
+                    onClick={() => updateSettings({ theme: 'sepia' as any })}
+                    className={`p-3 rounded-xl border-2 flex flex-col items-center gap-2 transition-all ${
+                      settings.theme === 'sepia' ? 'border-blue-500 bg-orange-100' : 'border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <Coffee className="w-5 h-5" />
+                    <span className="text-xs font-medium">Sepia</span>
+                  </button>
+                </div >
+              </div >
+
+              {/* Font Size */}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <label className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                    <Type className="w-4 h-4" /> Cỡ chữ
+                  </label>
+                  <span className="text-sm font-bold text-blue-600">{settings.fontSize}px</span>
+                </div >
+                <input
+                  type="range" min="12" max="32" step="2"
+                  value={settings.fontSize}
+                  onChange={(e) => updateSettings({ fontSize: parseInt(e.target.value) })}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div >
+
+              {/* Line Height */}
+              <div className="space-y-3">
+                <div className="flex justify-between">
+                  <label className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                    <AlignCenter className="w-4 h-4" /> Khoảng cách dòng
+                  </label>
+                  <span className="text-sm font-bold text-blue-600">{settings.lineHeight}</span>
+                </div >
+                <input
+                  type="range" min="1" max="2.5" step="0.1"
+                  value={settings.lineHeight}
+                  onChange={(e) => updateSettings({ lineHeight: parseFloat(e.target.value) })}
+                  className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                />
+              </div >
+
+              {/* Content Width */}
+              <div className="space-y-3">
+                <label className="text-sm font-bold text-slate-500 uppercase flex items-center gap-2">
+                  <Maximize2 className="w-4 h-4" /> Chiều rộng nội dung
+                </label>
+                <div className="flex gap-2">
+                  {(['narrow', 'medium', 'wide'] as const).map(w => (
+                    <button
+                      key={w}
+                      onClick={() => updateSettings({ contentWidth: w })}
+                      className={`flex-1 py-2 rounded-lg border-2 capitalize text-sm font-medium transition-all ${
+                        settings.contentWidth === w
+                          ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 text-blue-600'
+                          : 'border-slate-200 dark:border-slate-700 text-slate-500'
+                      }`}
+                    >
+                      {w === 'narrow' ? 'Hẹp' : w === 'medium' ? 'Vừa' : 'Rộng'}
+                    </button>
+                  ))}
+                </div >
+              </div >
+            </div >
+          </div >
+        </div >
+      </div >
+    </div >
+  );
+};
+
+export default Reader;

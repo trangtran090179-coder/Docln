@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3b82f6;
+  --color-primary-light: #60a5fa;
+  --color-primary-dark: #2563eb;
+  --color-secondary: #64748b;
+  --color-secondary-light: #94a3b8;
+  --color-secondary-dark: #475569;
+  --color-accent: #f59e0b;
+  --color-accent-light: #fbbf24;
+  --color-accent-dark: #d97706;
+  --color-surface-light: #ffffff;
+  --color-surface-dark: #1e293b;
+}
+
+/* Ép buộc Tailwind nhận diện dark mode qua class .dark */
+@variant dark (&:where(.dark, .dark *));
+
+:root {
+  --bg-main: #f8fafc;
+  --text-main: #0f172a;
+}
+
+.dark {
+  --bg-main: #0f172a;
+  --text-main: #f8fafc;
+}
+
+body {
+  @apply bg-slate-50 text-slate-900 transition-colors duration-200;
+  @apply dark:bg-slate-900 dark:text-slate-100;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+.btn-primary {
+  @apply px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-secondary {
+  @apply px-4 py-2 bg-slate-200 text-slate-700 rounded-lg hover:bg-slate-300 transition-colors;
+  @apply dark:bg-slate-700 dark:text-slate-200 dark:hover:bg-slate-600;
+}
+
+.card {
+  @apply bg-white border border-slate-200 rounded-xl shadow-sm hover:shadow-md transition-all;
+  @apply dark:bg-slate-800 dark:border-slate-700;
+}
