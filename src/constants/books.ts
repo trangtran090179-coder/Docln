@@ -316,7 +316,7 @@ export const MOCK_BOOKS: Book[] = [
     description: 'Cuốn sách giới thiệu về những danh nhân văn hóa tiêu biểu của Việt Nam, tôn vinh những giá trị tư tưởng và đóng góp to lớn của họ cho nền văn hiến dân tộc.',
     category: 'Lịch sử',
     coverUrl: 'https://via.placeholder.com/300x400?text=Danh+Nhan+Van+Hoa+VN',
-    documentUrl: '/books/Danh Nhan Van Hoa Viet Nam - Le Minh Quoc.pdf',
+    documentUrl: '/books/danh-nhan-van-hoa.pdf',
     type: 'book',
     status: 'completed',
     copyright: 'NXB Văn hóa',
