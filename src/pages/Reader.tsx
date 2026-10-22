@@ -25,9 +25,13 @@ const Reader: React.FC = () => {
     const loadPdf = async () => {
       try {
         setLoading(true);
+        const baseUrl = window.location.pathname.startsWith('/Docln')
+          ? `${window.location.origin}/Docln`
+          : window.location.origin;
+
         const pdfUrl = book.documentUrl.startsWith('http')
           ? book.documentUrl
-          : `${window.location.origin}${book.documentUrl}`;
+          : `${baseUrl}${book.documentUrl}`;
         const loadingTask = pdfjsLib.getDocument({ url: pdfUrl });
         const pdf = await loadingTask.promise;
         setNumPages(pdf.numPages);
